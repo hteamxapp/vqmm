@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HTeam Vòng Quay</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: black;
+      margin: 0;
+      padding: 0;
+      font-family: 'Comic Sans MS', cursive;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: start;
+      min-height: 100vh;
+    }
+    .hidden { display: none; }
+    #formBox {
+      background: white;
+      margin-top: 30px;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 350px;
+      text-align: center;
+    }
+    input, button {
+      width: 90%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    button {
+      background: #e91e63;
+      color: white;
+      cursor: pointer;
+    }
+    .logo, .title, .wheel-img, .btn-img {
+      display: block;
+      margin: 10px auto;
+      max-width: 100%;
+    }
+    .logo {
+      margin-top: 30px;
+      width: 220px;
+    }
+    .title {
+      width: 280px;
+      margin-top: 10px;
+    }
+    .wheel-wrapper {
+      width: 300px;
+      height: 300px;
+      margin: 20px auto;
+      position: relative;
+      border-radius: 50%;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wheel-img {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1/1;
+      border-radius: 50%;
+      transition: transform 5s ease-out;
+      display: block;
+    }
+    .pointer {
+      position: absolute;
+      top: 50%;
+      left: -30px;
+      transform: translateY(-50%);
+      font-size: 34px;
+      z-index: 10;
+    }
+    .spin-btn {
+      margin-top: 30px;
+      border: none;
+      background: none;
+      cursor: pointer;
+    }
+    .spin-btn img {
+      width: 200px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="formBox">
+    <h2 style="color:black">Vòng Quay May Mắn</h2>
+    <input type="text" id="name" placeholder="Nhập họ tên" />
+    <input type="text" id="code" placeholder="Nhập giftcode" />
+    <button onclick="verifyGiftcode()">Tiếp tục</button>
+    <div id="message" style="color:red;"></div>
+  </div>
+
+  <div id="wheelBox" class="hidden">
+    <img src="vqmm1.png" class="logo" />
+    <img src="vqmm2.png" class="title" />
+    <div class="wheel-wrapper">
+      <div class="pointer">👉</div>
+      <img src="vqmm3.png" id="wheel" class="wheel-img" />
+    </div>
+    <button class="spin-btn" onclick="spinWheel()" id="spinBtn">
+      <img src="vqmm4.png" alt="QUAY" class="btn-img" />
+    </button>
+  </div>
+
+  <audio id="spinSound" src="vqmm.mp3" preload="auto"></audio>
+
+  <script>
+    const apiURL = "https://sheetdb.io/api/v1/0atot78ads4jg";
+    const prizes = [
+      { name: "RAMDOM LÌ XÌ 10K-100K 🧧", rate: 0 },
+      { name: "1 BABY THREE SIZE LỚN 🎁", rate: 0 },
+      { name: "VOUCHER DỊCH VỤ HTEAM 10K 🎉", rate: 1 },
+      { name: "RANDOM 1000-10000 VIEW TIKTOK 👀", rate: 99 }
+    ];
+
+    let currentGiftcode = "", currentName = "", isSpinning = false;
+
+    function verifyGiftcode() {
+      const name = document.getElementById('name').value.trim();
+      const code = document.getElementById('code').value.trim();
+      const msg = document.getElementById('message');
+      if (!name || !code) return msg.innerText = 'Vui lòng nhập đầy đủ!';
+      fetch(`${apiURL}/search?sheet=vqmm&giftcode=${code}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.length) return msg.innerText = 'Giftcode không tồn tại!';
+          if (data[0].status?.toLowerCase() === 'done') return msg.innerText = 'Giftcode đã dùng!';
+          currentGiftcode = code;
+          currentName = name;
+          document.getElementById('formBox').classList.add('hidden');
+          document.getElementById('wheelBox').classList.remove('hidden');
+        });
+    }
+
+    function getPrizeByRate() {
+      const rand = Math.random() * 100;
+      let total = 0;
+      for (const prize of prizes) {
+        total += prize.rate;
+        if (rand <= total) return prize.name;
+      }
+      return prizes[prizes.length - 1].name;
+    }
+
+    function spinWheel() {
+      if (isSpinning) return;
+      isSpinning = true;
+      document.getElementById('spinBtn').disabled = true;
+
+      const sound = document.getElementById('spinSound');
+      sound.currentTime = 0;
+      sound.play();
+
+      const prize = getPrizeByRate();
+      const prizeIndex = prizes.findIndex(p => p.name === prize);
+      const wheel = document.getElementById('wheel');
+      const anglePerPrize = 360 / prizes.length;
+      const stopAngle = 360 * 5 + (360 - (prizeIndex * anglePerPrize + anglePerPrize / 2));
+      wheel.style.transition = 'transform 5s ease-out';
+      wheel.style.transform = `rotate(${stopAngle}deg)`;
+
+      setTimeout(() => {
+        let finalPrize = prize;
+        if (prize.includes('VIEW TIKTOK')) {
+          const randomView = Math.floor(Math.random() * (10000 - 1000 + 1)) + 1000;
+          finalPrize = `${randomView.toLocaleString()} VIEW TIKTOK 👀`;
+        }
+
+        alert(`${currentName}, bạn nhận được: ${finalPrize}`);
+
+        fetch(`${apiURL}/giftcode/${currentGiftcode}?sheet=vqmm`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'done', note: `${currentName} - ${finalPrize}` })
+        });
+      }, 5200);
+    }
+  </script>
+</body>
+</html>
